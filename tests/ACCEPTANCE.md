@@ -1,6 +1,6 @@
 # Cylon Skill v0.1 — Acceptance plan
 
-A happy-path demo is not sufficient. The Supabase PoC passes only when the protocol remains correct under concurrency, duplicate delivery, stale workers, loss of wake events, and host failure.
+A happy-path demo is not sufficient. The Supabase PoC passes only when the protocol remains correct under concurrency, duplicate delivery, stale workers, loss of wake events, host failure, and project lifecycle operations.
 
 ## Gate 0 — SKILL.md comprehension
 
@@ -10,7 +10,9 @@ Before testing distributed behavior, use a clean agent that has no prior Cylon c
 - configured backend access/profile
 - its local authenticated identity/capabilities
 
-Do not give it step-by-step Cylon instructions. In one normal invocation it must infer the correct startup loop: authenticate, re-read canonical state, discover/select a project, resolve role/permissions, resume owned work before new work, then process only authorized tasks/reviews/recovery. If no project exists, it must not invent one without explicit authorized instruction.
+Do not give it step-by-step Cylon instructions. In one normal invocation it must infer the correct startup loop: authenticate, re-read canonical state, discover/select or explicitly create a project when authorized, resolve role/permissions, resume owned work before new work, then process only authorized tasks/reviews/recovery. If no project exists, it must not invent one without explicit authorized instruction.
+
+It must also understand from `SKILL.md` alone that project completion/closure is not permission to delete, that archive is the normal reversible retirement path, and that hard deletion requires explicit exact-project authorization.
 
 The happy path should not require reading `PROTOCOL.md`, `RECOVERY.md`, or `SECURITY.md`; those are precision/reference documents for edge cases. If the clean agent needs conversational coaching to perform the normal loop, `SKILL.md` fails this gate.
 
@@ -27,6 +29,8 @@ The happy path should not require reading `PROTOCOL.md`, `RECOVERY.md`, or `SECU
 9. Worker submits an exact result/attempt.
 10. Reviewer evaluates that exact result.
 11. Approval completes the task/project without manual database repair.
+12. Owner can archive the completed project and restore it when authorized.
+13. An explicit owner/human deletion request for the exact project can delete it atomically/idempotently according to policy.
 
 ## Failure/concurrency battery
 
@@ -57,12 +61,17 @@ The PoC must test at least:
 23. prompt injection embedded in task/project content
 24. expired lease attempts to heartbeat or submit result
 25. project reaches terminal completion with no manual cleanup
+26. unauthorized worker/reviewer attempts to create or delete a project; rejected
+27. project is completed/closed; no implicit delete occurs
+28. delete requested while active task/lease exists; rejected or escalated unless explicit force-delete authority exists
+29. duplicate/retried delete request after uncertain transport outcome; one logical deletion and no partial cascade
+30. deletion request targets ambiguous/wrong project; fail closed
 
 ## Universal-skill proof
 
 After the two-agent battery passes, introduce a third clean agent/framework where practical. Give it only the same `SKILL.md`, backend connection/profile, and local identity. Do not provide Cylon coaching.
 
-Success means it can discover the project, determine its role, obtain/execute/review authorized work, and recover safely from canonical backend state using the skill plus backend profile alone.
+Success means it can discover/create/select the proper project when authorized, determine its role, obtain/execute/review authorized work, recover safely from canonical backend state, and manage allowed project lifecycle actions using the skill plus backend profile alone.
 
 ## PASS criteria
 
@@ -76,6 +85,7 @@ The v0.1 hypothesis is accepted only when evidence shows:
 - no direct agent-to-agent dependency
 - separate agent credentials
 - discovery/join
+- authorized create/archive/restore/delete project lifecycle
 - authorized directive ancestry
 - atomic task claim
 - exact-result review
