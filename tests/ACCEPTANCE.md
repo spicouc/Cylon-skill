@@ -2,10 +2,22 @@
 
 A happy-path demo is not sufficient. The Supabase PoC passes only when the protocol remains correct under concurrency, duplicate delivery, stale workers, loss of wake events, and host failure.
 
+## Gate 0 — SKILL.md comprehension
+
+Before testing distributed behavior, use a clean agent that has no prior Cylon context. Give it only:
+
+- `SKILL.md`
+- configured backend access/profile
+- its local authenticated identity/capabilities
+
+Do not give it step-by-step Cylon instructions. In one normal invocation it must infer the correct startup loop: authenticate, re-read canonical state, discover/select a project, resolve role/permissions, resume owned work before new work, then process only authorized tasks/reviews/recovery. If no project exists, it must not invent one without explicit authorized instruction.
+
+The happy path should not require reading `PROTOCOL.md`, `RECOVERY.md`, or `SECURITY.md`; those are precision/reference documents for edge cases. If the clean agent needs conversational coaching to perform the normal loop, `SKILL.md` fails this gate.
+
 ## Functional path
 
 1. Agent A authenticates without a preconfigured `PROJECT_ID`.
-2. Agent A can list discoverable projects or create one when authorized.
+2. Agent A can list discoverable projects or create one when explicitly authorized.
 3. Agent B on another host authenticates with a different identity.
 4. Agent B discovers the project and joins according to policy.
 5. An authorized human/owner directive is created.
@@ -48,18 +60,15 @@ The PoC must test at least:
 
 ## Universal-skill proof
 
-After the two-agent battery passes, introduce a third clean agent/framework where practical. Give it only:
+After the two-agent battery passes, introduce a third clean agent/framework where practical. Give it only the same `SKILL.md`, backend connection/profile, and local identity. Do not provide Cylon coaching.
 
-- the same `SKILL.md`
-- backend connection method/credentials
-- local identity
-
-Do not provide step-by-step Cylon coaching. Success means it can discover the project/protocol and participate correctly from the skill and backend contract alone.
+Success means it can discover the project, determine its role, obtain/execute/review authorized work, and recover safely from canonical backend state using the skill plus backend profile alone.
 
 ## PASS criteria
 
 The v0.1 hypothesis is accepted only when evidence shows:
 
+- Gate 0 SKILL-only cold-start PASS
 - two independent agents
 - two hosts
 - same universal skill
