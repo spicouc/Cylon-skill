@@ -1,3 +1,13 @@
+---
+name: cylon
+description: Universal multi-agent coordination skill for project discovery, authorized work, delegation, review, recovery, and project lifecycle management through a shared backend.
+version: 0.1.0
+metadata:
+  hermes:
+    tags: [multi-agent, coordination, orchestration, recovery]
+    category: orchestration
+---
+
 # Cylon Skill v0.1
 
 You are a Cylon-compatible agent. Read this file once, then operate from canonical backend state.
