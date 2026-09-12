@@ -1,0 +1,82 @@
+# Cylon Skill v0.1 — Acceptance plan
+
+A happy-path demo is not sufficient. The Supabase PoC passes only when the protocol remains correct under concurrency, duplicate delivery, stale workers, loss of wake events, and host failure.
+
+## Functional path
+
+1. Agent A authenticates without a preconfigured `PROJECT_ID`.
+2. Agent A can list discoverable projects or create one when authorized.
+3. Agent B on another host authenticates with a different identity.
+4. Agent B discovers the project and joins according to policy.
+5. An authorized human/owner directive is created.
+6. Coordinator decomposes the directive into valid tasks.
+7. Worker atomically claims a task.
+8. Worker records start and may use bounded local subagents.
+9. Worker submits an exact result/attempt.
+10. Reviewer evaluates that exact result.
+11. Approval completes the task/project without manual database repair.
+
+## Failure/concurrency battery
+
+The PoC must test at least:
+
+1. two agents claim the same task concurrently; exactly one wins
+2. same mutation/request delivered twice; one logical effect
+3. worker dies immediately after claim
+4. worker dies after doing work but before result submission
+5. stale worker returns after task reassignment; stale write rejected
+6. coordinator disappears
+7. two agents race to recover coordinator authority; one authoritative epoch/lease
+8. backend temporarily unavailable
+9. transport timeout after a successful backend commit; idempotent retry does not duplicate
+10. duplicate realtime event
+11. missing realtime event; polling/wake recovery still finds canonical work
+12. duplicate result submission
+13. review submitted against an old result version; rejected/stale
+14. invalid credentials
+15. replay/reuse of a one-time join token when join invites are implemented
+16. unauthorized cross-project read/write attempt
+17. task/subagent attempts to broaden directive scope
+18. subagent failure with bounded fresh-subagent recovery
+19. identical failure repeated until circuit breaker triggers
+20. host A killed during active project work
+21. host B killed during active project work
+22. incompatible protocol major versions
+23. prompt injection embedded in task/project content
+24. expired lease attempts to heartbeat or submit result
+25. project reaches terminal completion with no manual cleanup
+
+## Universal-skill proof
+
+After the two-agent battery passes, introduce a third clean agent/framework where practical. Give it only:
+
+- the same `SKILL.md`
+- backend connection method/credentials
+- local identity
+
+Do not provide step-by-step Cylon coaching. Success means it can discover the project/protocol and participate correctly from the skill and backend contract alone.
+
+## PASS criteria
+
+The v0.1 hypothesis is accepted only when evidence shows:
+
+- two independent agents
+- two hosts
+- same universal skill
+- Supabase canonical backend
+- no direct agent-to-agent dependency
+- separate agent credentials
+- discovery/join
+- authorized directive ancestry
+- atomic task claim
+- exact-result review
+- bounded subagent delegation
+- idempotent mutations
+- lease/fencing stale-worker rejection
+- recovery/reassignment
+- coordinator recovery
+- kill tests
+- project isolation
+- terminal project completion
+
+Any manual database edit required to rescue the test is a failed recovery test and must be documented rather than hidden.
