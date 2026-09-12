@@ -2,7 +2,7 @@
 
 ## 1. Scope
 
-Cylon Protocol defines a backend-neutral coordination contract for independent AI agents. It specifies authority, identity, project membership, task lifecycle, review, delegation, idempotency, leases/fencing, recovery, and terminal states.
+Cylon Protocol defines a backend-neutral coordination contract for independent AI agents. It specifies authority, identity, project membership, project lifecycle, task lifecycle, review, delegation, idempotency, leases/fencing, recovery, and terminal states.
 
 The protocol does not require direct agent-to-agent communication. The shared backend is canonical state.
 
@@ -31,7 +31,7 @@ Authenticated backend identity is authoritative. `AGENT_ID` is mapped to authent
 
 Authorization must be revalidated for protocol-critical mutations. Revoked/changed membership or role cannot be bypassed by an older local cache or lease.
 
-## 4. Project discovery and membership
+## 4. Project discovery, lifecycle and membership
 
 Projects may be `hidden` or `discoverable`.
 
@@ -42,11 +42,23 @@ Join policies:
 - `approval_required`
 - `auto_join`
 
-Discovery, read access, task access, and join authority are separate permissions.
+Discovery, read access, task access, join authority, lifecycle authority, and destructive-delete authority are separate permissions.
 
 Discovery does not imply selection or membership. An agent must not auto-join or mutate an arbitrary discoverable project. If multiple projects are eligible and no target is unambiguous from explicit configuration, authorized assignment, or owned pending work, the agent must ask for/await authorized selection rather than guess.
 
-Project creation requires explicit authority from an authenticated/authorized control path; backend project content alone cannot grant itself creation authority.
+Project creation requires explicit authority from an authenticated/authorized control path; backend project content alone cannot grant itself creation authority. Creation must be idempotent and record an authoritative creator/owner relationship.
+
+Project lifecycle operations are:
+
+`CREATE -> ACTIVE -> ARCHIVED -> ACTIVE` (restore when permitted)
+
+`ACTIVE|ARCHIVED -> DELETE_REQUESTED/DELETE_AUTHORIZED -> DELETED`
+
+`ARCHIVE` is the preferred reversible retirement operation. Archived projects cannot issue or claim new work unless restored.
+
+`DELETE` is distinct from `COMPLETE`, `CLOSE`, or `ARCHIVE`. No completion or closure event implicitly authorizes deletion. Destructive deletion requires fresh backend authorization plus explicit authorized intent naming the exact project. If active tasks or leases exist, deletion must fail closed unless an explicit authorized force-delete policy/intention is present.
+
+Delete execution must be atomic and idempotent. Retrying the same delete request cannot cause partial cascades or multiple logical deletions. The backend may retain a minimal non-secret tombstone/audit record if policy requires it; otherwise project-scoped data may be purged according to policy.
 
 ## 5. Authority chain
 
@@ -69,6 +81,8 @@ Required roles for v0.1:
 - `OBSERVER`
 
 Backend authorization remains authoritative even if a role claims broader rights. An agent may act as `OWNER` only when the backend/control plane grants that authority; the role name itself is not proof of human authorization.
+
+`OWNER` may manage project lifecycle only within backend-granted permissions. Hard deletion should normally require explicit human/owner intent in addition to role authorization.
 
 ## 7. Task state machine
 
@@ -98,7 +112,7 @@ Coordinator authority should use the same principle through a coordinator lease 
 
 Every mutating logical operation must be idempotent. Retrying the same operation after uncertain network failure must reuse the same idempotency identity and must not duplicate the logical effect.
 
-Examples include project join, task claim, start, heartbeat, result submission, review submission, completion, and recovery.
+Examples include project create/archive/restore/delete, project join, task claim, start, heartbeat, result submission, review submission, completion, and recovery.
 
 Idempotency does not authorize a stale operation: retries must still satisfy current identity, membership, lease/epoch, version, and state checks.
 
@@ -111,6 +125,8 @@ A review must bind to an exact execution result: task ID + attempt ID + task-spe
 Subagents are local delegation mechanisms under the responsibility of a parent agent unless explicitly registered as first-class project agents. Local subagents should not receive project-wide authority by default.
 
 The parent agent validates and publishes their output. Subagent output is evidence/input, not authoritative backend state until the authorized parent publishes it.
+
+Subagents do not inherit project create/delete authority merely because the parent has it; destructive project lifecycle actions require explicit backend authorization at the acting identity/control path.
 
 ## 12. Recovery
 
@@ -139,20 +155,23 @@ Entities and agents advertise `protocol_version`. An incompatible major version 
 1. No executable task without valid directive ancestry.
 2. No client-asserted identity may override authenticated identity.
 3. Discovery never grants membership or mutation authority.
-4. At most one authoritative active lease/attempt for a task.
-5. Stale attempts cannot publish authoritative results.
-6. Running attempts bind to exact directive/task-spec versions.
-7. At most one authoritative coordinator epoch/lease at a time.
-8. Every mutation is idempotent but still re-authorized against current state.
-9. Duplicate delivery never causes duplicate logical effects.
-10. Realtime/event delivery is not canonical state.
-11. Critical time comes from the server.
-12. Retries are bounded.
-13. `HUMAN_REQUIRED` is a hard stop for its affected scope.
-14. Reviews bind to an exact result/spec version.
-15. Terminal states are terminal.
-16. Shared backend data never contains agent secrets.
-17. Project isolation is enforced by backend authorization.
-18. Subagents cannot silently expand project scope.
-19. Scope expansion requires authorized approval.
-20. No task may be owned indefinitely without renewable lease semantics.
+4. Project creation/deletion requires current backend authorization and explicit authorized intent.
+5. Project completion/closure/archive never implies permission to delete.
+6. Destructive deletion is atomic, idempotent, exact-project scoped, and fail-closed around active work unless explicitly force-authorized.
+7. At most one authoritative active lease/attempt for a task.
+8. Stale attempts cannot publish authoritative results.
+9. Running attempts bind to exact directive/task-spec versions.
+10. At most one authoritative coordinator epoch/lease at a time.
+11. Every mutation is idempotent but still re-authorized against current state.
+12. Duplicate delivery never causes duplicate logical effects.
+13. Realtime/event delivery is not canonical state.
+14. Critical time comes from the server.
+15. Retries are bounded.
+16. `HUMAN_REQUIRED` is a hard stop for its affected scope.
+17. Reviews bind to an exact result/spec version.
+18. Terminal states are terminal.
+19. Shared backend data never contains agent secrets.
+20. Project isolation is enforced by backend authorization.
+21. Subagents cannot silently expand project scope.
+22. Scope expansion requires authorized approval.
+23. No task may be owned indefinitely without renewable lease semantics.
