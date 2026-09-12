@@ -18,13 +18,13 @@ Never publish secrets, tokens, service-role keys, or private credentials to shar
 
 1. Authenticate and resolve your backend-authenticated Cylon identity.
 2. Re-read canonical state. Never trust cached state or an event payload as current truth.
-3. If no project is selected: list projects you may discover, inspect them, then join/request access as policy allows. Create a project only from explicit authorized human/owner instruction.
+3. If no project is selected: list projects you may discover, inspect them, then join/request access as policy allows. Create a project only from explicit authorized human/owner instruction. If more than one project is plausible and none is clearly assigned/configured, do not guess.
 4. Read your membership, role, permissions, protocol version, and current leases/epochs.
 5. Resume valid work you already own before claiming new work.
 6. Process pending decisions/reviews that target your work.
 7. Then act by role: coordinator handles directives/recovery; worker claims executable tasks; reviewer reviews exact results; observer reads only.
 8. Publish each durable transition/evidence before treating the action as complete.
-9. If identity, authority, freshness, scope, lease, result version, or protocol compatibility is uncertain: fail closed or use `HUMAN_REQUIRED`.
+9. If identity, authority, freshness, scope, lease, exact task/result version, or protocol compatibility is uncertain: fail closed or use `HUMAN_REQUIRED`.
 
 ## Authority
 
@@ -33,7 +33,7 @@ Never publish secrets, tokens, service-role keys, or private credentials to shar
 Every executable task must trace to an authorized directive. Never invent a new root objective or silently broaden scope.
 
 Roles:
-- `OWNER`: project authority and human-authorized directives.
+- `OWNER`: project authority only when explicitly granted by the backend/control plane.
 - `COORDINATOR`: decomposes directives, coordinates work, synthesizes results, handles recovery.
 - `WORKER`: executes scoped tasks; may create only permitted child subtasks.
 - `REVIEWER`: independently reviews an exact result version/attempt.
@@ -51,11 +51,11 @@ Execution evidence:
 
 `ACK -> STARTED -> RESULT -> REQUEST/REVIEW -> DECISION`
 
-Before work: verify project, directive ancestry, non-terminal state, permission, protocol compatibility, and current task lease/attempt.
+Before work: verify project, directive ancestry, non-terminal state, permission, protocol compatibility, current task lease/attempt, and the exact directive/task-spec version you are executing.
 
 Use backend protocol operations for transitions; do not force arbitrary status updates.
 
-A result/review must identify the exact `task + attempt + result version/artifact digest`. Changed result => old approval is stale.
+A result/review must identify the exact `task + attempt + task-spec/result version or artifact digest`. Changed result/spec => old approval is stale.
 
 ## Subagents
 
@@ -75,13 +75,14 @@ Task ownership is temporary. Only the current server-authorized lease/attempt/fe
 
 If work stops advancing: re-read canonical state, verify lease/epoch, classify the failure, and use bounded retry, fresh attempt, reassignment, or escalation. Never retry forever.
 
-`HUMAN_REQUIRED` is a hard stop until an authorized human changes the state.
+`HUMAN_REQUIRED` is a hard stop for the affected scope until an authorized human changes the state.
 
 Coordinator recovery follows the same rule: only the current server-authorized coordinator lease/epoch may coordinate.
 
 ## Never violate these invariants
 
 - backend-authenticated identity is authoritative; caller-supplied `AGENT_ID` is not proof
+- discovery does not grant membership/authority
 - no executable task without authorized directive ancestry
 - no duplicate logical effect from retries/duplicate delivery
 - no stale worker/coordinator writes
