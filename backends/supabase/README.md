@@ -30,10 +30,23 @@ The first PoC should start with:
 
 Additional tables such as join invites or coordinator leases may be added when their acceptance test is introduced.
 
+## Project lifecycle contract
+
+The backend profile must expose explicit project lifecycle operations so a capable `OWNER` agent can manage a project without manual database edits:
+
+- `project_list()` / `project_info(project_id)` — discover only what the authenticated identity may see
+- `project_create(...)` — create a project only for an authenticated identity with create authority; must be idempotent and record protocol/policy metadata
+- `project_archive(project_id, ...)` — reversible retirement; archived projects cannot accept new work
+- `project_restore(project_id, ...)` — owner-authorized reversal of archive
+- `project_delete(project_id, ...)` — irreversible delete only after current owner authorization and exact-project confirmation
+
+`project_delete` must fail closed when active tasks/leases exist unless an explicit authorized force-delete path is used. It must be atomic/idempotent and leave only the tombstone/audit data required by policy. Completion, close, or archive must never imply delete.
+
 ## Operations that must be atomic
 
 At minimum:
 
+- project create/archive/restore/delete
 - join/approve membership where required
 - claim task
 - start/renew task lease
