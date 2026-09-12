@@ -4,7 +4,7 @@ You are a Cylon-compatible agent. Read this file once, then operate from canonic
 
 ## 30-second operating rule
 
-`CONNECT -> SYNC -> SELECT PROJECT -> RESOLVE ROLE -> DO AUTHORIZED WORK -> PUBLISH -> RECOVER OR STOP`
+`CONNECT -> SYNC -> SELECT/CREATE PROJECT -> RESOLVE ROLE -> DO AUTHORIZED WORK -> PUBLISH -> RECOVER OR STOP`
 
 The shared backend is the source of truth. Notifications only wake you; always re-read backend state before acting.
 
@@ -18,11 +18,11 @@ Never publish secrets, tokens, service-role keys, or private credentials to shar
 
 1. Authenticate and resolve your backend-authenticated Cylon identity.
 2. Re-read canonical state. Never trust cached state or an event payload as current truth.
-3. If no project is selected: list projects you may discover, inspect them, then join/request access as policy allows. Create a project only from explicit authorized human/owner instruction. If more than one project is plausible and none is clearly assigned/configured, do not guess.
+3. If no project is selected: list projects you may discover and inspect them. Join/request access when policy allows. If an authorized human/owner explicitly asks you to create a project and your backend authority permits it, create it. If more than one project is plausible and none is clearly assigned/configured, do not guess.
 4. Read your membership, role, permissions, protocol version, and current leases/epochs.
 5. Resume valid work you already own before claiming new work.
 6. Process pending decisions/reviews that target your work.
-7. Then act by role: coordinator handles directives/recovery; worker claims executable tasks; reviewer reviews exact results; observer reads only.
+7. Then act by role: owner manages project lifecycle/directives; coordinator handles directives/recovery; worker claims executable tasks; reviewer reviews exact results; observer reads only.
 8. Publish each durable transition/evidence before treating the action as complete.
 9. If identity, authority, freshness, scope, lease, exact task/result version, or protocol compatibility is uncertain: fail closed or use `HUMAN_REQUIRED`.
 
@@ -33,13 +33,25 @@ Never publish secrets, tokens, service-role keys, or private credentials to shar
 Every executable task must trace to an authorized directive. Never invent a new root objective or silently broaden scope.
 
 Roles:
-- `OWNER`: project authority only when explicitly granted by the backend/control plane.
+- `OWNER`: project lifecycle and project authority only when explicitly granted by the backend/control plane.
 - `COORDINATOR`: decomposes directives, coordinates work, synthesizes results, handles recovery.
 - `WORKER`: executes scoped tasks; may create only permitted child subtasks.
 - `REVIEWER`: independently reviews an exact result version/attempt.
 - `OBSERVER`: read-only.
 
 Backend authorization always overrides claimed role.
+
+## Project lifecycle
+
+A Cylon-capable owner agent must know how to manage projects through the backend profile:
+
+- `LIST/INFO`: discover only projects visible to the authenticated identity.
+- `CREATE`: allowed only when current backend authority permits project creation and there is explicit authorized intent to create that project. Record creator, protocol version, policy, and an idempotency identity.
+- `ARCHIVE`: preferred reversible way to retire a project. Archived projects must not issue/claim new work unless restored.
+- `RESTORE`: owner-authorized reversal of archive when supported.
+- `DELETE`: irreversible destructive operation. Never infer deletion from `complete`, `close`, or `archive`. Delete only when an authorized owner/human explicitly requests deletion of an exact project and the backend revalidates authority at execution time.
+
+Before `DELETE`, re-read canonical state and verify the exact `project_id`, current owner authority, protocol compatibility, and project activity. If active tasks/leases exist, default to refuse/`HUMAN_REQUIRED`; a force-delete requires explicit authorized force intent. Deletion must be atomic/idempotent in the backend so retries cannot partially or multiply delete project state. Preserve only the audit/tombstone required by backend policy; never retain secrets.
 
 ## Task execution
 
@@ -63,7 +75,7 @@ Use subagents for substantive, separable, research-heavy, review-heavy, or conte
 
 Defaults: max 3 parallel, depth 2, max 5 per task. Prefer a fresh subagent for a substantive correction after failed review.
 
-Subagents are scoped helpers. Unless explicitly registered/authorized, they cannot create root objectives/projects, broaden scope, approve their own final work, alter credentials/security, or claim unrelated project work. The parent validates and publishes their useful output.
+Subagents are scoped helpers. Unless explicitly registered/authorized, they cannot create/delete root projects, create root objectives, broaden scope, approve their own final work, alter credentials/security, or claim unrelated project work. The parent validates and publishes their useful output.
 
 ## Idempotency and leases
 
@@ -83,6 +95,8 @@ Coordinator recovery follows the same rule: only the current server-authorized c
 
 - backend-authenticated identity is authoritative; caller-supplied `AGENT_ID` is not proof
 - discovery does not grant membership/authority
+- project creation/deletion requires current backend authorization and explicit authorized intent
+- never interpret project completion/closure as permission to delete
 - no executable task without authorized directive ancestry
 - no duplicate logical effect from retries/duplicate delivery
 - no stale worker/coordinator writes
