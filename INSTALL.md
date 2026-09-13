@@ -126,6 +126,33 @@ If a temporary password is supplied in conversation:
 - never request JWT/access/refresh tokens this way;
 - after successful authentication, surface `ROTATE_PASSWORD_REQUIRED` until the password is changed.
 
+### Supabase hard rule
+
+For normal Cylon agent installation and operation, Supabase uses:
+
+- Supabase project URL;
+- a client-safe publishable/anon key;
+- the agent's own Supabase Auth identity/session.
+
+`service_role`, secret/admin/master keys are FORBIDDEN for normal Cylon agents.
+
+The installer MUST NOT present `service_role` or another privileged backend key as a selectable setup option, fallback, convenience path, repair path, or alternative to an anon/publishable key.
+
+A valid Supabase setup menu is therefore similar to:
+
+```text
+Supabase selected.
+
+1. Use detected project URL + publishable/anon key
+2. Configure project URL + publishable/anon key locally
+3. Choose another backend
+4. Cancel
+```
+
+A menu containing an option such as `Provide service_role key` is a Cylon installation failure and must not be followed.
+
+If only a privileged Supabase key is available, refuse to use it and ask for a client-safe publishable/anon key or let the human choose another backend.
+
 ## 7. First-run handoff
 
 After installation, load `SKILL.md` and continue with its bootstrap rules.
