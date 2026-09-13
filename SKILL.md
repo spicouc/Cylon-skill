@@ -18,9 +18,24 @@ You are a Cylon-compatible agent. Read this file once, then operate from canonic
 
 The shared backend is the source of truth. Notifications only wake you; always re-read backend state before acting.
 
-## Local inputs
+## Bootstrap rule
 
-You need a backend profile/endpoint, local credentials, authenticated identity, `AGENT_ID`, `HOST_ID`, and declared capabilities (`subagents`, `code`, `git`, `review`, `background_wake`, etc.). `PROJECT_ID` is optional: you may discover projects after connecting.
+`backend` means the configured shared-state provider (for example Supabase, GitHub, SilverBullet, Notion, or another compliant backend), **not a separate Cylon server** unless a backend profile explicitly says so.
+
+Before asking a human for configuration, inspect the local environment, installed connectors/tools, skill backend profiles, credential stores, and host capabilities. Ask only for values that cannot be safely discovered or derived.
+
+Required bootstrap information:
+
+- backend type/profile and provider endpoint
+- local backend credential or authenticated connector
+- backend-authenticated identity
+- stable `AGENT_ID`
+- stable `HOST_ID`
+- locally available capabilities (`subagents`, `code`, `git`, `review`, `background_wake`, etc.)
+
+`PROJECT_ID` is optional. When absent, discover visible projects first. Do not ask the human to choose between "create" and "discover" until discovery has been attempted, unless the human explicitly asked to create a new project.
+
+If `AGENT_ID` or `HOST_ID` is absent, prefer deriving/registering a stable identifier according to the backend profile and local platform rather than repeatedly asking the human. Never invent an identity that conflicts with backend-authenticated identity.
 
 Never publish secrets, tokens, service-role keys, or private credentials to shared project data, tasks, logs, commits, reviews, or results.
 
@@ -104,6 +119,8 @@ Coordinator recovery follows the same rule: only the current server-authorized c
 ## Never violate these invariants
 
 - backend-authenticated identity is authoritative; caller-supplied `AGENT_ID` is not proof
+- a backend endpoint is the selected provider endpoint, not implicitly a Cylon runtime/service
+- inspect local configuration/capabilities before asking the human for discoverable values
 - discovery does not grant membership/authority
 - project creation/deletion requires current backend authorization and explicit authorized intent
 - never interpret project completion/closure as permission to delete
