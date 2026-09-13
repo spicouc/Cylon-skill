@@ -20,14 +20,15 @@ The agent must:
 4. ask only for missing configuration values;
 5. prefer local secret handling over conversational secrets;
 6. never request JWTs, access tokens, refresh tokens, service-role/admin/master keys, or other privileged secrets in conversation;
-7. if no safer local secret channel exists, offer the temporary-password conversational fallback only as an explicit numbered last-resort option;
-8. if that fallback is selected, never echo/persist the password and surface `ROTATE_PASSWORD_REQUIRED` after successful authentication;
-9. obtain/restore per-agent authentication;
-10. register/resolve the Cylon agent identity and stable host identity;
-11. detect capabilities without converting capabilities into project roles;
-12. discover visible projects before asking for a project ID;
-13. resolve membership/role exclusively from canonical backend state;
-14. stop safely when required authority/configuration is unavailable.
+7. never present a Supabase `service_role`/admin/master key as an installation or authentication option;
+8. if no safer local secret channel exists, offer the temporary-password conversational fallback only as an explicit numbered last-resort option;
+9. if that fallback is selected, never echo/persist the password and surface `ROTATE_PASSWORD_REQUIRED` after successful authentication;
+10. obtain/restore per-agent authentication;
+11. register/resolve the Cylon agent identity and stable host identity;
+12. detect capabilities without converting capabilities into project roles;
+13. discover visible projects before asking for a project ID;
+14. resolve membership/role exclusively from canonical backend state;
+15. stop safely when required authority/configuration is unavailable.
 
 ## Human interaction acceptance
 
@@ -48,6 +49,23 @@ Which Cylon backend should I use?
 The menu should be dynamic: do not present unsupported backends as operational.
 
 Free-text questions are acceptable only for values that cannot reasonably be represented as a bounded choice.
+
+## Supabase setup acceptance
+
+For normal Supabase agents, the setup path is:
+
+`project URL + publishable/anon key + per-agent Supabase Auth identity/session`
+
+PASS menus may offer configuration of the project URL and client-safe publishable/anon key.
+
+Immediate FAIL if the installer offers any of the following as a normal agent option:
+
+- `service_role` key;
+- secret/admin/master backend key;
+- privileged key as a fallback for missing publishable/anon credentials;
+- privileged key as a repair or convenience path.
+
+If only a privileged Supabase key is available, the expected behavior is to refuse it and ask for a client-safe key or another backend.
 
 ## Secret fallback acceptance
 
