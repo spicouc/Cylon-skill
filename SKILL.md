@@ -27,8 +27,8 @@ Before asking a human for configuration, inspect the local environment, installe
 Required bootstrap information:
 
 - backend type/profile and provider endpoint
-- local backend credential or authenticated connector
-- backend-authenticated identity
+- safe client connection credential or authenticated connector
+- backend-authenticated per-agent identity/session
 - stable `AGENT_ID`
 - stable `HOST_ID`
 - locally available capabilities (`subagents`, `code`, `git`, `review`, `background_wake`, etc.)
@@ -36,6 +36,12 @@ Required bootstrap information:
 `PROJECT_ID` is optional. When absent, discover visible projects first. Do not ask the human to choose between "create" and "discover" until discovery has been attempted, unless the human explicitly asked to create a new project.
 
 If `AGENT_ID` or `HOST_ID` is absent, prefer deriving/registering a stable identifier according to the backend profile and local platform rather than repeatedly asking the human. Never invent an identity that conflicts with backend-authenticated identity.
+
+### Credential safety
+
+Never request, accept, expose, store, or use a backend administrative/master credential for normal agent operation. In particular, a Supabase agent must **never** request or use a `service_role`/admin secret key. If such a key is offered, refuse it for agent operation.
+
+For Supabase, normal agent bootstrap should use a public client key suitable for untrusted clients (for example the project's public/anon or publishable client credential as supported by the backend profile) **plus a per-agent authenticated session/access token**, or an already-authenticated connector. A public client key by itself is not agent identity and must not grant privileged Cylon operations. Authorization must resolve through the authenticated agent identity and backend policy/RLS/RPC.
 
 Never publish secrets, tokens, service-role keys, or private credentials to shared project data, tasks, logs, commits, reviews, or results.
 
@@ -121,6 +127,8 @@ Coordinator recovery follows the same rule: only the current server-authorized c
 - backend-authenticated identity is authoritative; caller-supplied `AGENT_ID` is not proof
 - a backend endpoint is the selected provider endpoint, not implicitly a Cylon runtime/service
 - inspect local configuration/capabilities before asking the human for discoverable values
+- normal agents never use backend administrative/master credentials; Supabase `service_role` is forbidden for agent operation
+- public/anon/publishable client credentials are not agent identity and do not bypass per-agent authentication/authorization
 - discovery does not grant membership/authority
 - project creation/deletion requires current backend authorization and explicit authorized intent
 - never interpret project completion/closure as permission to delete
