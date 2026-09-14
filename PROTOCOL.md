@@ -1,4 +1,4 @@
-# Cylon Protocol v0.1
+# Cylon Protocol v0.3
 
 ## 1. Scope
 
@@ -6,9 +6,13 @@ Cylon Protocol defines a backend-neutral coordination contract for independent A
 
 The protocol does not require direct agent-to-agent communication. The shared backend is canonical state.
 
+Cylon v0.3 introduces two workflow paths:
+- **FAST PATH**: lightweight execution for assigned tasks without mandatory claim/start/review
+- **STRICT PATH**: full coordination with claim/start/lease/review for contested, destructive, or policy-required work
+
 ## 2. Canonical entities
 
-Minimum v0.1 entities:
+Minimum v0.3 entities:
 
 - `PROJECT`
 - `AGENT`
@@ -72,7 +76,7 @@ Directives and task specifications must be versioned or content-bound. A running
 
 ## 6. Roles
 
-Required roles for v0.1:
+Required roles for v0.3:
 
 - `OWNER`
 - `COORDINATOR`
@@ -86,11 +90,24 @@ Backend authorization remains authoritative even if a role claims broader rights
 
 ## 7. Task state machine
 
-Allowed normal path:
+### FAST PATH (default)
+
+`READY (assigned) -> EXECUTING -> RESULT_READY -> COMPLETE`
+
+The FAST PATH applies when a task is explicitly addressed/assigned to an authorized agent and no collision, destructiveness, or policy requirement demands strict coordination. The agent reads the assigned task and executes directly without a separate claim/start cycle. The agent publishes the result as the authoritative output.
+
+### STRICT PATH (opt-in/escalation)
 
 `READY -> CLAIMED -> RUNNING -> RESULT_READY -> REVIEW -> COMPLETE`
 
-Recovery/error states:
+The STRICT PATH applies when:
+- The task is contested (multiple workers competing)
+- The task involves destructive changes
+- Project policy mandates review for all tasks
+- Leases/fencing are required by backend
+- The coordinator explicitly escalates to strict mode
+
+### Recovery/error states (both paths):
 
 `RUNNING -> STALLED -> RECOVERY -> READY|BLOCKED|HUMAN_REQUIRED`
 
@@ -102,15 +119,21 @@ Terminal states must not return to an active state. Rework creates a new attempt
 
 ## 8. Attempts, leases and fencing
 
+### STRICT PATH
+
 Each execution attempt must have a server-authorized identity and lease/fencing value. A stale attempt cannot publish authoritative progress or results after a newer attempt has replaced it.
 
 An attempt must bind at minimum to its task ID, task-spec version/digest, directive version, and fencing/lease identity. The backend must reject writes from stale attempts even if the old worker later reconnects.
 
 Coordinator authority should use the same principle through a coordinator lease or monotonically advancing epoch.
 
+### FAST PATH
+
+Assigned tasks in FAST PATH do not require a separate claim/attempt object unless the backend or project policy mandates it. The execution identity is the authorized agent itself, and the result is published directly. Backend atomicity is not required when there is no concurrent worker contention on the same task.
+
 ## 9. Idempotency
 
-Every mutating logical operation must be idempotent. Retrying the same operation after uncertain network failure must reuse the same idempotency identity and must not duplicate the logical effect.
+Every mutating logical operation must be idempotent. Retrying the same operation after uncertain network failure should reuse the same idempotency identity and must not duplicate the logical effect.
 
 Examples include project create/archive/restore/delete, project join, task claim, start, heartbeat, result submission, review submission, completion, and recovery.
 
@@ -119,6 +142,8 @@ Idempotency does not authorize a stale operation: retries must still satisfy cur
 ## 10. Review binding
 
 A review must bind to an exact execution result: task ID + attempt ID + task-spec/result version or artifact digest. A later result or materially changed task specification invalidates approval of the earlier result.
+
+FAST PATH results awaiting review are submitted via `PUBLISH RESULT` and become eligible for review when required by policy or coordinator decision.
 
 ## 11. Delegation
 
@@ -150,7 +175,7 @@ Security- and concurrency-critical timestamps must be server-derived. Agent loca
 
 Entities and agents advertise `protocol_version`. An incompatible major version is fail-closed.
 
-## 16. Required invariants
+## 16. Required invariants (v0.3)
 
 1. No executable task without valid directive ancestry.
 2. No client-asserted identity may override authenticated identity.
@@ -158,7 +183,7 @@ Entities and agents advertise `protocol_version`. An incompatible major version 
 4. Project creation/deletion requires current backend authorization and explicit authorized intent.
 5. Project completion/closure/archive never implies permission to delete.
 6. Destructive deletion is atomic, idempotent, exact-project scoped, and fail-closed around active work unless explicitly force-authorized.
-7. At most one authoritative active lease/attempt for a task.
+7. At most one authoritative active lease/attempt for a task (STRICT PATH).
 8. Stale attempts cannot publish authoritative results.
 9. Running attempts bind to exact directive/task-spec versions.
 10. At most one authoritative coordinator epoch/lease at a time.
@@ -174,4 +199,15 @@ Entities and agents advertise `protocol_version`. An incompatible major version 
 20. Project isolation is enforced by backend authorization.
 21. Subagents cannot silently expand project scope.
 22. Scope expansion requires authorized approval.
-23. No task may be owned indefinitely without renewable lease semantics.
+23. No task may be owned indefinitely without renewable lease semantics (STRICT PATH).
+24. FAST PATH tasks require no claim/attempt objects when backend atomicity is not needed.
+25. Addressed tasks are immediately executable by the named authorized agent without separate claim (FAST PATH).
+
+## 17. FAST PATH operational rules
+
+1. A task assigned/addressed to an agent is immediately executable by that agent without a claim cycle.
+2. The result is published directly through the backend canonical-state write.
+3. Review is triggered by policy, coordinator decision, or destructive-change flag — not required for every task.
+4. Leases/heartbeats are not required unless the backend enforces them for all writes.
+5. FAST PATH preserves all identity, authorization, and invariant protections from the protocol.
+6. STRICT PATH remains available and backwards-compatible for all existing use cases.
