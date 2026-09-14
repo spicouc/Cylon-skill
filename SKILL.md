@@ -524,13 +524,13 @@ Backend profiles SHOULD map both paths onto their native operations. The FAST PA
 
 ## Appendix: Protocol Document — Fast Path Examples
 
-### Supabase (Layer 1+2)
+### Supabase
 
 FAST PATH on Supabase uses the existing RPCs but omits claim/start for assigned tasks:
 - Task creation includes `p_assigned_agent_id` (optional)
 - `cylon_list_tasks` returns tasks where `assigned_agent_id = current_agent`
 - `cylon_publish_result` writes result without attempt object
-- `cylon_acknowledge` optional confirmation
+- `cython_acknowledge` optional confirmation
 
 ### GitHub
 
