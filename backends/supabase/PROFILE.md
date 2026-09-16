@@ -29,7 +29,7 @@ For password-auth PoC:
 
 Headers:
 
-- `apikey: <SUPABASE_PUBLISHABLE_KEY>`
+- `apikey: <SUPAB...EY>`
 - `Content-Type: application/json`
 
 Authenticated RPC calls use:
@@ -38,8 +38,8 @@ Authenticated RPC calls use:
 
 Headers:
 
-- `apikey: <SUPABASE_PUBLISHABLE_KEY>`
-- `Authorization: Bearer <LOCAL_ACCESS_TOKEN>`
+- `apikey: <SUPAB...EY>`
+- `Authorization: Bearer <LOCAL...EN>`
 - `Content-Type: application/json`
 
 An agent may use curl, an HTTP library, a Supabase SDK, or an authenticated connector. Do not search for local tools named after RPCs unless a platform profile explicitly maps them.
@@ -80,6 +80,10 @@ Coordination and work:
 - `cylon_submit_result(p_task_id, p_attempt_id, p_result, p_idempotency_key)`
 - `cylon_request_review(p_task_id, p_attempt_id, p_idempotency_key)`
 - `cylon_review_result(p_task_id, p_attempt_id, p_result_version, p_result_digest, p_decision, p_notes, p_idempotency_key)`
+
+Trusted connector coordination extension:
+
+- `cylon_trusted_connector_create_task(p_agent_key, p_project_id, p_directive_id, p_title, p_spec, p_parent_task_id, p_idempotency_key)`
 
 ## Task lifecycle
 
@@ -131,6 +135,12 @@ Administrative provisioning helpers:
 Canonical trusted review operation:
 
 - `cylon_trusted_connector_review_result(...)`
+
+Trusted connector task creation (coordination extension):
+
+- `cylon_trusted_connector_create_task(...)`
+
+Allowed only for connectors with coordinator or owner role. Reviewer-only connectors are denied.
 
 These functions are for controlled backend-management connectors only. They must never appear as a normal-agent bootstrap choice and must never be used to bypass project roles or task state.
 
