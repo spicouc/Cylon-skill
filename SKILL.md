@@ -530,7 +530,7 @@ FAST PATH on Supabase uses the existing RPCs but omits claim/start for assigned 
 - Task creation includes `p_assigned_agent_id` (optional)
 - `cylon_list_tasks` returns tasks where `assigned_agent_id = current_agent`
 - `cylon_publish_result` writes result without attempt object
-- `cython_acknowledge` optional confirmation
+- `cylon_acknowledge` optional confirmation
 
 ### GitHub
 
